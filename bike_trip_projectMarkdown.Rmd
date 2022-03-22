@@ -130,7 +130,7 @@ str(trips2021)
 
 ## Remove rides that are less than zero.
 
-Attach a version number to distinguish it. Add version 1.
+Attach a version to distinguish it.
 
 ```{r Remove unnecessary values}
  trips2021_final <- trips2021[!(trips2021$ride_length<0),]
