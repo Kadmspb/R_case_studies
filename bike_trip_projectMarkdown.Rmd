@@ -1,0 +1,310 @@
+---
+title: "Capstone project Google Data Analytics Course R report"
+author: "Oleg Kulikov"
+date: "2/27/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This project uses fictional company Cyclistic to perform an analysis of historical trip data.
+Data used from https://divvy-tripdata.s3.amazonaws.com/index.html is provided by Motivate International Inc
+under this licence https://ride.divvybikes.com/data-license-agreement.
+
+## Three Questions will guide the future marketing program.
+
+1. How do annual members and casual riders use Cyclistic bikes differently?
+2. Why would casual riders buy Cyclistic annual memberships?
+3. How can Cyclistic use digital media to influence casual riders to become members?
+
+You are assigned first question to answer.
+
+## Deliverables
+
+You will produce a report with the following deliverables:
+1. A clear statement of the business task
+2. A description of all data sources used
+3. Documentation of any cleaning or manipulation of data
+4. A summary of your analysis
+5. Supporting visualizations and key findings
+6. Your top three recommendations based on your analysis
+
+## Steps of Analysis:
+
+1. Download CVS files from the past 12 months.
+2. Open each dataset in Excel to get familiar with data.
+3. Uploading required packages for our data analysis and visualizations.
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(janitor)
+library(skimr)
+```
+4. Uploading excel files into RStudio Environment.
+
+```{r Data Import}
+X202101_divvy_tripdata <- read_excel("Bikedata/XLS_data/202101-divvy-tripdata.xlsx")
+X202102_divvy_tripdata <- read_excel("Bikedata/XLS_data/202102-divvy-tripdata.xlsx")
+X202103_divvy_tripdata <- read_excel("Bikedata/XLS_data/202103-divvy-tripdata.xlsx")
+X202104_divvy_tripdata <- read_excel("Bikedata/XLS_data/202104-divvy-tripdata.xlsx")
+X202105_divvy_tripdata <- read_excel("Bikedata/XLS_data/202105-divvy-tripdata.xlsx")
+X202106_divvy_tripdata <- read_excel("Bikedata/XLS_data/202106-divvy-tripdata.xlsx")
+X202107_divvy_tripdata <- read_excel("Bikedata/XLS_data/202107-divvy-tripdata.xlsx")
+X202108_divvy_tripdata <- read_excel("Bikedata/XLS_data/202108-divvy-tripdata.xlsx")
+X202109_divvy_tripdata <- read_excel("Bikedata/XLS_data/202109-divvy-tripdata.xlsx")
+X202110_divvy_tripdata <- read_excel("Bikedata/XLS_data/202110-divvy-tripdata.xlsx")
+X202111_divvy_tripdata <- read_excel("Bikedata/XLS_data/202111-divvy-tripdata.xlsx")
+X202112_divvy_tripdata <- read_excel("Bikedata/XLS_data/202112-divvy-tripdata.xlsx")
+```
+
+## Getting Familiar with Data before merging it all together.
+In example I will show just first table, but we will perform same checks on every table before merging.
+
+```{r check the column names}
+colnames(X202101_divvy_tripdata)
+
+View(X202101_divvy_tripdata)
+```
+
+Inspecting elements and data formats to make sure that everything matches before integration.
+
+```{r compare_df_cols}
+compare_df_cols(X202101_divvy_tripdata,X202102_divvy_tripdata,X202103_divvy_tripdata,X202104_divvy_tripdata,X202105_divvy_tripdata,X202106_divvy_tripdata,X202107_divvy_tripdata,X202108_divvy_tripdata,X202109_divvy_tripdata,X202110_divvy_tripdata,X202111_divvy_tripdata,X202112_divvy_tripdata)
+```
+
+## Combining tables into one dataset.
+
+```{r combine into one file}
+trips2021 <- bind_rows(X202101_divvy_tripdata,X202102_divvy_tripdata,X202103_divvy_tripdata,X202104_divvy_tripdata,X202105_divvy_tripdata,X202106_divvy_tripdata,X202107_divvy_tripdata,X202108_divvy_tripdata,X202109_divvy_tripdata,X202110_divvy_tripdata,X202110_divvy_tripdata,X202111_divvy_tripdata,X202112_divvy_tripdata)
+```
+
+## Let's check on our new data set.
+
+Now let's check out our results, it will show a huge file with all the data for entire 2021 year.
+
+```{r view}
+view(trips2021)
+```
+
+Use Summary function to get even more insights into data
+```{r summary}
+summary(trips2021)
+```
+
+## Preparing our data set for final analysis.
+
+# Creating additional columns as as month, date and day of the week.
+
+For analysis by month, date, and day of the week, extract separately from the started_at column. 
+We first extract dates only from the started_at column to create new date columns, and then extract months, day, and day of the week.
+
+These extra columns will help us calculate trip length in our next step.
+
+```{r Create columns as month, day, and day of the week}
+trips2021$date <- as.Date(trips2021$started_at)
+trips2021$month <- format(as.Date(trips2021$date), "%m")
+trips2021$day <- format(as.Date(trips2021$date), "%d")
+trips2021$year <- format(as.Date(trips2021$date), "%Y")
+trips2021$day_of_the_week <- format(as.Date(trips2021$date), "%A")
+```
+
+# Calculating length of each trip and changing data format.
+
+We will subtract values of started_at from the value of ended_at to find the length of each trip, and create a ride_length column.
+
+```{r ride length}
+trips2021$ride_length <- difftime(trips2021$ended_at,trips2021$started_at)
+```
+
+Change ride_length data format to 'numeric'.
+We need to do it for analysis and calculations.
+
+```{r ride_length to numeric}
+trips2021$ride_length <- as.numeric(as.character(trips2021$ride_length))
+```
+
+# Let's check out our new columns.
+
+```{r view}
+str(trips2021)
+```
+
+# Remove lat and long fields as this data is not needed for our analysis.
+
+```{r remove unnecessary columns}
+trips2021_v1 <- trips2021 %>% select(-c(start_lat, start_lng, end_lat, end_lng))
+```
+
+# Remove rides that are less than zero.
+
+Attach a different name to distinguish it.
+
+```{r Remove unnecessary values}
+ trips2021_final <- trips2021_v1[!(trips2021$ride_length<0),]
+```
+
+This removed 147 observations from our original data frame.
+
+# Inspect new table we created.
+
+```{r inspection}
+str(trips2021_final)
+summary(trips2021_final)
+```
+
+## Analyzing our clean data set and answering the question assigned to us.
+
+# ride_length analysis.
+
+```{r ride_length analysis}
+summary(trips2021_final$ride_length)
+```
+# Compare members and casual users.
+
+```{r aggregate}
+aggregate(trips2021_final$ride_length ~ trips2021_final$member_casual, FUN = mean)
+aggregate(trips2021_final$ride_length ~ trips2021_final$member_casual, FUN = median)
+aggregate(trips2021_final$ride_length ~ trips2021_final$member_casual, FUN = max)
+aggregate(trips2021_final$ride_length ~ trips2021_final$member_casual, FUN = min)
+```
+
+# See the average trip length by each day for members vs casual users.
+
+```{r average trip length}
+aggregate(trips2021_final$ride_length ~ trips2021_final$member_casual + trips2021_final$day_of_the_week,
+          FUN = mean)
+```
+
+As we can see days of the week are out of order, let's fix that.
+
+```{r fixing weekly order}
+trips2021_final$day_of_the_week <- as.factor(trips2021_final$day_of_the_week) #convert day_of_the_week field to factor data type. 
+trips2021_final$day_of_the_week <- ordered(trips2021_final$day_of_the_week, 
+                                    levels=c("Sunday", "Monday", "Tuesday", "Wednesday",  "Thursday", "Friday", "Saturday"))
+```
+
+Now we can run average trip length by  member again.
+
+```{r average trip length}
+aggregate(trips2021_final$ride_length ~ trips2021_final$member_casual + trips2021_final$day_of_the_week,
+          FUN = mean)
+```
+
+# Analyzing ridership data by member type and weekday.
+
+```{r }
+trips2021_final %>%
+  mutate(weekday = lubridate::wday(started_at, label = TRUE)) %>% 
+  group_by(member_casual, weekday) %>% #groups by membership and weekday
+  summarise(number_of_rides = n(),average_duration = mean(ride_length)) %>% #calculates the number of rides and average duration
+  arrange(member_casual, weekday) #sorts our data
+```  
+  
+Our data for year 2021 shows that members make more trips than casuals. This is a trend during the week but on the weekend trend is reversed, casuals travel the most.
+
+Casuals make the longest rides regardless of the day of the week.
+
+##Data visualization.
+
+# Visualize the number of rides by rider type
+
+```{r number of rides}
+trips2021_final %>%
+  mutate(weekday = lubridate::wday(started_at, label = TRUE)) %>%
+  group_by(member_casual, weekday) %>%
+  summarise(number_of_rides = n(), average_duration = mean(ride_length)) %>%
+  arrange(member_casual, weekday) %>%
+  ggplot(aes(x = weekday, y = number_of_rides, fill = member_casual)) +
+  geom_col(position = "dodge") +
+  xlab("Day of the Week") +
+  ylab("Number of trips") +
+  labs(fill="Membership Type")
+
+```
+
+# Visualize the average duration by rider type
+
+```{r ride length}
+trips2021_final %>%
+  dplyr::mutate(weekday = lubridate::wday(started_at, label = TRUE)) %>%
+  dplyr::group_by(member_casual, weekday) %>%
+  dplyr::summarise(number_of_rides = dplyr::n(), average_duration = mean(ride_length)) %>%
+  dplyr::arrange(member_casual, weekday) %>%
+  ggplot(aes(x = weekday, y = average_duration, fill = member_casual)) +
+  geom_col(position = "dodge") +
+  xlab("Day of the Week") +
+  ylab("Number of trips") +
+  labs(fill="Membership Type")
+```
+
+## Recommendations based on analysis.
+
+1.Cyclistic should increase the prices of single ride and full day passes because data shows that casuals take less trips for the most of the week but take the longest rides.
+2.Annual riders are most likely people who bike to and from work during the week. Campaign should identify casual members who use bikes like annual members.
+3.Casual riders who take trips longer than 24 hours should be targeted to convert to annual membership.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
